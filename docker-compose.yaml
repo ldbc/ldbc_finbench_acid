@@ -1,0 +1,99 @@
+version: '3.3'
+
+services:
+  # neo4j-3:
+  #   image: neo4j:3.5.20
+  #   environment:
+  #     - NEO4J_AUTH=none
+  #   networks:
+  #     acid_net:
+  #       ipv4_address: 10.5.0.3
+  # neo4j-4:
+  #   image: neo4j:4.1.1
+  #   environment:
+  #     - NEO4J_AUTH=none
+  #   networks:
+  #     acid_net:
+  #       ipv4_address: 10.5.0.4
+  neo4j-5:
+    image: neo4j:5.5.0
+    environment:
+      - NEO4J_AUTH=none
+    networks:
+      acid_net:
+        ipv4_address: 10.5.0.5
+  # neo4j_test3:
+  #   image: acid_test
+  #   build: .
+  #   depends_on:
+  #     - neo4j-3
+  #   env_file: .env
+  #   extra_hosts:
+  #     - "neo4j:10.5.0.3"
+  #   volumes:
+  #     - ./:/work/acid
+  #   working_dir: /work/acid
+  #   networks:
+  #     acid_net:
+  #       ipv4_address: 10.5.0.103
+  #   command:
+  #     ['mvn', '-Dtest=Neo4jAcidTest', 'test']
+  # neo4j_test4:
+  #   image: acid_test
+  #   build: .
+  #   depends_on:
+  #     - neo4j-4
+  #   env_file: .env
+  #   extra_hosts:
+  #     - "neo4j:10.5.0.4"
+  #   volumes:
+  #     - ./:/work/acid
+  #   working_dir: /work/acid
+  #   networks:
+  #     acid_net:
+  #       ipv4_address: 10.5.0.104
+  #   command:
+  #     ['mvn', '-Dtest=Neo4jAcidTest', 'test']
+  neo4j_test5:
+    image: acid_test
+    build: .
+    depends_on:
+      - neo4j-5
+    env_file: .env
+    extra_hosts:
+      - "neo4j:10.5.0.5"
+    volumes:
+      - ./:/work/acid
+    working_dir: /work/acid
+    networks:
+      acid_net:
+        ipv4_address: 10.5.0.105
+    command:
+      [ 'mvn', '-Dtest=Neo4jAcidTest', 'test' ]
+  memgraph:
+    image: memgraph/memgraph-platform:2.6.5-memgraph2.5.2-lab2.4.0-mage1.6
+    entrypoint: ["/usr/bin/supervisord"]
+    networks:
+      acid_net:
+        ipv4_address: 10.5.0.6
+  memgraph_test:
+    image: acid_test
+    build: .
+    depends_on:
+      - memgraph
+    env_file: .env
+    extra_hosts:
+      - "neo4j:10.5.0.6"
+    volumes:
+      - ./:/work/acid
+    working_dir: /work/acid
+    networks:
+      acid_net:
+        ipv4_address: 10.5.0.106
+    command:
+      [ 'mvn', '-Dtest=Neo4jAcidTest', 'test' ]
+networks:
+  acid_net:
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
