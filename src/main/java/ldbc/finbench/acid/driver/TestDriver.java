@@ -11,8 +11,8 @@ public abstract class TestDriver<TestTransactionT, QueryParametersT, QueryResult
     public abstract void abortTransaction(TestTransactionT tt) throws Exception;
 
     public abstract QueryResultT runQuery(TestTransactionT tt, String querySpecification,
-                                          QueryParametersT queryParameters)
-        throws Exception;
+            QueryParametersT queryParameters)
+            throws Exception;
 
     public void sleep(long millis) {
         try {
