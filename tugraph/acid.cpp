@@ -337,7 +337,7 @@ void G1AInit(auto& db) {
     txn.Commit();
 }
 
-void G1A1(auto& db, int64_t account1_id, int64_t sleep_ms) {
+void G1AW(auto& db, int64_t account1_id, int64_t sleep_ms) {
     auto txn = db.CreateWriteTxn(optimistic);
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -349,7 +349,7 @@ void G1A1(auto& db, int64_t account1_id, int64_t sleep_ms) {
     txn.Abort();
 }
 
-double G1A2(auto& db, int64_t account1_id) {
+double G1AR(auto& db, int64_t account1_id) {
     auto txn = db.CreateReadTxn();
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -371,7 +371,7 @@ void G1ATest(auto& db) {
 #pragma omp parallel for reduction(+:num_aborted_txns)
         for (int i = 0; i < wc; i ++) {
             try {
-                G1A1(db, 1, 250);
+                G1AW(db, 1, 250);
             } catch (std::exception& e) {
                 num_aborted_txns ++;
             }
@@ -386,7 +386,7 @@ void G1ATest(auto& db) {
         int64_t num_incorrect_checks = 0;
 #pragma omp parallel for reduction(+:num_incorrect_checks)
         for (int i = 0; i < rc; i ++) {
-            auto a_balance = G1A2(db, 1);
+            auto a_balance = G1AR(db, 1);
             if (a_balance != 99) num_incorrect_checks ++;
         }
         p2.set_value(num_incorrect_checks);
@@ -421,7 +421,7 @@ void G1BInit(auto& db) {
     txn.Commit();
 }
 
-void G1B1(auto& db, int64_t account1_id, int64_t sleep_ms, int64_t even, int64_t odd) {
+void G1BW(auto& db, int64_t account1_id, int64_t sleep_ms, int64_t even, int64_t odd) {
     auto txn = db.CreateWriteTxn(optimistic);
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -433,7 +433,7 @@ void G1B1(auto& db, int64_t account1_id, int64_t sleep_ms, int64_t even, int64_t
     txn.Commit();
 }
 
-double G1B2(auto& db, int64_t account1_id) {
+double G1BR(auto& db, int64_t account1_id) {
     auto txn = db.CreateReadTxn();
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -455,7 +455,7 @@ void G1BTest(auto& db) {
 #pragma omp parallel for reduction(+:num_aborted_txns)
         for (int i = 0; i < wc; i ++) {
             try {
-                G1B1(db, 1, 250, 200, 99);
+                G1BW(db, 1, 250, 200, 99);
             } catch (std::exception& e) {
                 num_aborted_txns ++;
             }
@@ -470,7 +470,7 @@ void G1BTest(auto& db) {
         int64_t num_incorrect_checks = 0;
 #pragma omp parallel for reduction(+:num_incorrect_checks)
         for (int i = 0; i < rc; i ++) {
-            auto a_balance = G1B2(db, 1);
+            auto a_balance = G1BR(db, 1);
             if (int64_t(a_balance) % 2 != 1) num_incorrect_checks ++;
         }
         p2.set_value(num_incorrect_checks);
@@ -596,7 +596,7 @@ void IMPInit(auto& db) {
     txn.Commit();
 }
 
-void IMP1(auto& db, int64_t account1_id) {
+void IMPW(auto& db, int64_t account1_id) {
     auto txn = db.CreateWriteTxn(optimistic);
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -606,7 +606,7 @@ void IMP1(auto& db, int64_t account1_id) {
     txn.Commit();
 }
 
-std::tuple<double, double> IMP2(auto& db, int64_t account1_id, int64_t sleep_ms) {
+std::tuple<double, double> IMPR(auto& db, int64_t account1_id, int64_t sleep_ms) {
     auto txn = db.CreateReadTxn();
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -635,7 +635,7 @@ void IMPTest(auto& db) {
 #pragma omp parallel for reduction(+:num_aborted_txns)
         for (int i = 0; i < wc; i ++) {
             try {
-                IMP1(db, 1);
+                IMPW(db, 1);
             } catch (std::exception& e) {
                 num_aborted_txns ++;
             }
@@ -651,7 +651,7 @@ void IMPTest(auto& db) {
 #pragma omp parallel for reduction(+:num_incorrect_checks)
         for (int i = 0; i < rc; i ++) {
             int64_t v1, v2;
-            std::tie(v1, v2) = IMP2(db, 1, 250);
+            std::tie(v1, v2) = IMPR(db, 1, 250);
             if (v1 != v2) num_incorrect_checks ++;
         }
         p2.set_value(num_incorrect_checks);
@@ -692,7 +692,7 @@ void PMPInit(auto& db) {
     txn.Commit();
 }
 
-void PMP1(auto& db, int64_t account1_id, int64_t account2_id) {
+void PMPW(auto& db, int64_t account1_id, int64_t account2_id) {
     auto txn = db.CreateWriteTxn(optimistic);
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -712,7 +712,7 @@ void PMP1(auto& db, int64_t account1_id, int64_t account2_id) {
     txn.Commit();
 }
 
-std::tuple<int64_t, int64_t> PMP2(auto& db, int64_t account_id, int64_t sleep_ms) {
+std::tuple<int64_t, int64_t> PMPR(auto& db, int64_t account_id, int64_t sleep_ms) {
     auto txn = db.CreateReadTxn();
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -747,7 +747,7 @@ void PMPTest(auto& db) {
 #pragma omp parallel for reduction(+:num_aborted_txns)
         for (int i = 0; i < wc; i ++) {
             try {
-                PMP1(db, 1, 2);
+                PMPW(db, 1, 2);
             } catch (std::exception& e) {
                 num_aborted_txns ++;
             }
@@ -763,7 +763,7 @@ void PMPTest(auto& db) {
 #pragma omp parallel for reduction(+:num_incorrect_checks)
         for (int i = 0; i < rc; i ++) {
             int64_t v1, v2;
-            std::tie(v1, v2) = PMP2(db, 1, 250);
+            std::tie(v1, v2) = PMPR(db, 1, 250);
             if (v1 != v2) num_incorrect_checks ++;
         }
         p2.set_value(num_incorrect_checks);
@@ -809,7 +809,7 @@ void OTVInit(auto& db) {
     txn.Commit();
 }
 
-void OTV1(auto& db, int64_t account_id) {
+void OTVW(auto& db, int64_t account_id) {
     auto txn = db.CreateWriteTxn(optimistic);
     auto vit1 = txn.GetVertexIterator();
     for (; vit1.IsValid(); vit1.Next()) {
@@ -840,7 +840,7 @@ void OTV1(auto& db, int64_t account_id) {
     }
 }
 
-std::tuple< std::tuple<double, double, double, double>, std::tuple<double, double, double, double> > OTV2(auto& db, int64_t account_id, int64_t sleep_ms) {
+std::tuple< std::tuple<double, double, double, double>, std::tuple<double, double, double, double> > OTVR(auto& db, int64_t account_id, int64_t sleep_ms) {
     auto txn = db.CreateReadTxn();
     auto vit1 = txn.GetVertexIterator();
 
@@ -896,7 +896,7 @@ void OTVTest(auto& db) {
 #pragma omp parallel for reduction(+:num_aborted_txns)
         for (int i = 0; i < wc; i ++) {
             try {
-                OTV1(db, 1);
+                OTVW(db, 1);
             } catch (std::exception& e) {
                 num_aborted_txns ++;
             }
@@ -912,7 +912,7 @@ void OTVTest(auto& db) {
 #pragma omp parallel for reduction(+:num_incorrect_checks)
         for (int i = 0; i < rc; i ++) {
             std::tuple<int64_t, int64_t, int64_t, int64_t> tup1, tup2;
-            std::tie(tup1, tup2) = OTV2(db, 1, 250);
+            std::tie(tup1, tup2) = OTVR(db, 1, 250);
             int64_t v1_max = std::max(std::max(std::get<0>(tup1), std::get<1>(tup1)), std::max(std::get<2>(tup1), std::get<3>(tup1)));
             int64_t v2_min = std::min(std::min(std::get<0>(tup2), std::get<1>(tup2)), std::min(std::get<2>(tup2), std::get<3>(tup2)));
             if (v1_max > v2_min) num_incorrect_checks ++;
@@ -940,12 +940,12 @@ void FRInit(auto& db) {
     OTVInit(db);
 }
 
-void FR1(auto& db, int64_t account_id) {
-    OTV1(db, account_id);
+void FRW(auto& db, int64_t account_id) {
+    OTVW(db, account_id);
 }
 
-std::tuple< std::tuple<int64_t, int64_t, int64_t, int64_t>, std::tuple<int64_t, int64_t, int64_t, int64_t> > FR2(auto& db, int64_t account_id, int64_t sleep_ms) {
-    return OTV2(db, account_id, sleep_ms);
+std::tuple< std::tuple<int64_t, int64_t, int64_t, int64_t>, std::tuple<int64_t, int64_t, int64_t, int64_t> > FRR(auto& db, int64_t account_id, int64_t sleep_ms) {
+    return OTVR(db, account_id, sleep_ms);
 }
 
 void FRTest(auto& db) {
@@ -961,7 +961,7 @@ void FRTest(auto& db) {
 #pragma omp parallel for reduction(+:num_aborted_txns)
         for (int i = 0; i < wc; i ++) {
             try {
-                FR1(db, 1);
+                FRW(db, 1);
             } catch (std::exception& e) {
                 num_aborted_txns ++;
             }
@@ -977,7 +977,7 @@ void FRTest(auto& db) {
 #pragma omp parallel for reduction(+:num_incorrect_checks)
         for (int i = 0; i < rc; i ++) {
             std::tuple<int64_t, int64_t, int64_t, int64_t> tup1, tup2;
-            std::tie(tup1, tup2) = FR2(db, 1, 250);
+            std::tie(tup1, tup2) = FRR(db, 1, 250);
             if (tup1 != tup2) num_incorrect_checks ++;
         }
         p2.set_value(num_incorrect_checks);
@@ -1012,7 +1012,7 @@ void LUInit(auto& db) {
     txn.Commit();
 }
 
-void LU1(auto& db, int64_t account1_id, int64_t account2_id) {
+void LUW(auto& db, int64_t account1_id, int64_t account2_id) {
     auto txn = db.CreateWriteTxn(optimistic);
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -1033,7 +1033,7 @@ void LU1(auto& db, int64_t account1_id, int64_t account2_id) {
     txn.Commit();
 }
 
-std::tuple<int64_t, int64_t> LU2(auto& db, int64_t account_id) {
+std::tuple<int64_t, int64_t> LUR(auto& db, int64_t account_id) {
     auto txn = db.CreateReadTxn();
     auto vit = txn.GetVertexIterator();
     for (; vit.IsValid(); vit.Next()) {
@@ -1057,7 +1057,7 @@ void LUTest(auto& db) {
 #pragma omp parallel for reduction(+:num_aborted_txns)
     for (int64_t i = 0; i < num_txns; i ++) {
         try {
-            LU1(db, 1, i + 2);
+            LUW(db, 1, i + 2);
         } catch (std::exception& e) {
             num_aborted_txns ++;
         }
@@ -1066,7 +1066,7 @@ void LUTest(auto& db) {
     std::cout << "Number of aborted txns: " << num_aborted_txns << std::endl;
 
     int64_t num_transfer_prop, num_transfer_edges;
-    std::tie(num_transfer_prop, num_transfer_edges) = LU2(db, 1);
+    std::tie(num_transfer_prop, num_transfer_edges) = LUR(db, 1);
 
     std::cout << num_txns << " " << num_aborted_txns << " " << num_transfer_prop << " " << num_transfer_edges << std::endl;
 
@@ -1102,7 +1102,7 @@ void WSInit(auto& db) {
     txn.Commit();
 }
 
-void WS1(auto& db, int64_t account1_id, int64_t account2_id, int64_t sleep_ms, std::mt19937& gen) {
+void WSW(auto& db, int64_t account1_id, int64_t account2_id, int64_t sleep_ms, std::mt19937& gen) {
     auto txn = db.CreateWriteTxn(optimistic);
     auto vit1 = txn.GetVertexIterator();
     for (; vit1.IsValid(); vit1.Next()) {
@@ -1127,7 +1127,7 @@ void WS1(auto& db, int64_t account1_id, int64_t account2_id, int64_t sleep_ms, s
     txn.Commit();
 }
 
-std::vector< std::tuple<int64_t, double, int64_t, double> > WS2(auto& db) {
+std::vector< std::tuple<int64_t, double, int64_t, double> > WSR(auto& db) {
     std::vector< std::tuple<int64_t, double, int64_t, double> > results;
     auto txn = db.CreateReadTxn();
     for (auto vit1 = txn.GetVertexIterator(); vit1.IsValid(); vit1.Next()) {
@@ -1169,7 +1169,7 @@ void WSTest(auto& db) {
         try {
             int64_t account1_id = dist(gen) * 2 - 1;
             int64_t account2_id = account1_id + 1;
-            WS1(db, account1_id, account2_id, 250, gen);
+            WSW(db, account1_id, account2_id, 250, gen);
         } catch (std::exception& e) {
             num_aborted_txns ++;
         }
@@ -1177,7 +1177,7 @@ void WSTest(auto& db) {
 
     std::cout << "Number of aborted txns: " << num_aborted_txns << std::endl;
 
-    auto results = WS2(db);
+    auto results = WSR(db);
 
     if (results.empty()) {
         std::cout << "WSTest passed" << std::endl;
