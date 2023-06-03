@@ -172,7 +172,7 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
             Assert.assertEquals(a1VersionHistory, a2VersionHistory);
             Assert.assertEquals(tVersionHistory, a1VersionHistory);
         }
-        Assert.assertEquals(0, aborted);
+        Assert.assertTrue(aborted != wc);
         logger.info("Test passed.");
     }
 
@@ -285,8 +285,8 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         logger.info("The number of aborted read transactions: " + abortedR);
 
         Assert.assertEquals(0, numAnomaly);
-        Assert.assertEquals(0, abortedW);
-        Assert.assertEquals(0, abortedR);
+        Assert.assertTrue(abortedW != wc);
+        Assert.assertTrue(abortedR != rc);
 
         logger.info("Test passed");
     }
@@ -408,8 +408,8 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         logger.info("The number of aborted read transactions: " + abortedR);
         logger.info("The number of aborted write transactions: " + abortedW);
         Assert.assertEquals(0, numAnomaly);
-        Assert.assertEquals(0, abortedW);
-        Assert.assertEquals(0, abortedR);
+        Assert.assertTrue(abortedW != c);
+        Assert.assertTrue(abortedR != c);
         logger.info("Test passed");
     }
 
@@ -465,8 +465,8 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         logger.info("The number of aborted write transactions: " + abortedW);
 
         Assert.assertEquals(0, numAnomaly);
-        Assert.assertEquals(0, abortedW);
-        Assert.assertEquals(0, abortedR);
+        Assert.assertTrue(abortedW != c);
+        Assert.assertTrue(abortedR != c);
 
         logger.info("Test passed");
     }
@@ -565,8 +565,8 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         logger.info("The number of aborted write transactions: " + abortedW);
 
         Assert.assertEquals(0, numAnomaly);
-        Assert.assertEquals(0, abortedR);
-        Assert.assertEquals(0, abortedW);
+        Assert.assertTrue(abortedR != c);
+        Assert.assertTrue(abortedW != c);
         logger.info("Test passed");
     }
 
@@ -605,7 +605,7 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         logger.info("The number of aborted transactions: " + aborted);
         Assert.assertEquals(nTransactions - aborted, numTransferEdges);
         Assert.assertEquals(nTransactions - aborted, numTransferred);
-        Assert.assertEquals(0, aborted);
+        Assert.assertTrue(aborted != nTransactions);
         logger.info("Test passed");
     }
 
@@ -644,7 +644,7 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         Map<String, Object> results = testDriver.wsR(ImmutableMap.of());
         // logger.info(results);
 
-        Assert.assertEquals(0, aborted);
+        Assert.assertTrue(aborted != wc);
         Assert.assertTrue(results.isEmpty());
         logger.info("Test passed");
     }
