@@ -5,6 +5,7 @@ the [LDBC FinBench specification](https://ldbcouncil.org/ldbc_finbench_docs/ldbc
 
 ## Supported Systems
 
-* Neo4j
-* Memgraph
-* TuGraph
+* bolt: Neo4j && Memgraph
+* tugraph: TuGraph
+
+Please see each subdirectory for more information and test usage.
