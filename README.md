@@ -38,13 +38,32 @@ docker run -it --rm -p 7687:7687 memgraph/memgraph-platform:2.6.5-memgraph2.5.2-
 Run tests:
 
 ```bash
+cd bolt
 mvn -Dtest=Neo4jAcidTest test
 ```
 
-| Database  | C                  | RB                 | Isolation Level | G0                 | G1a                | G1c                | OTV                | FR                 | IMP                | PMP                | LU                 | WS  |
-|-----------|--------------------|--------------------|-----------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|-----|
+### TuGraph
+
+Version 3.4.0:
+
+```bash
+docker run --rm -p 7070:7070 -p 9090:9090 tugraph/tugraph-runtime-centos7:3.4.0
+```
+
+Run tests:
+
+```bash
+cd tugraph
+sh compile_embedded.sh acid
+./acid
+```
+
+
+| Database | C                  | RB                 | Isolation Level | G0                 | G1a                | G1c                | OTV                | FR                 | IMP                | PMP                | LU                 | WS                 |
+|----------|--------------------|--------------------|-----------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
 | Neo4j 3&4 | :white_check_mark: | :white_check_mark: | Read Committed  | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :white_check_mark: | :x: |
-| Memgraph  | :white_check_mark: | :white_check_mark: | Snapshot        | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
+| Memgraph | :white_check_mark: | :white_check_mark: | Snapshot        | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                |
+| TuGraph  | :white_check_mark: | :white_check_mark: | Serializable    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 > tip
 
