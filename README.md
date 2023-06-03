@@ -41,11 +41,10 @@ Run tests:
 mvn -Dtest=Neo4jAcidTest test
 ```
 
-| Database | C                  | RB                 | Isolation Level | G0                 | G1a                | G1c                | OTV                | FR                 | IMP                | PMP                | LU                 | WS  |
-| -------- | ------------------ | ------------------ | --------------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | --- |
-| Neo4j 3  | :white_check_mark: | :white_check_mark: | Read Committed  | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :white_check_mark: | :x: |
-| Neo4j 4  | :white_check_mark: | :white_check_mark: | Read Committed  | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :x: |
-| Memgraph | :white_check_mark: | :white_check_mark: | Snapshot  | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
+| Database  | C                  | RB                 | Isolation Level | G0                 | G1a                | G1c                | OTV                | FR                 | IMP                | PMP                | LU                 | WS  |
+|-----------|--------------------|--------------------|-----------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|-----|
+| Neo4j 3&4 | :white_check_mark: | :white_check_mark: | Read Committed  | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :white_check_mark: | :x: |
+| Memgraph  | :white_check_mark: | :white_check_mark: | Snapshot        | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
 
 > tip
 
