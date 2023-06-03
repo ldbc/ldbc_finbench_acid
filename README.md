@@ -7,5 +7,6 @@ the [LDBC FinBench specification](https://ldbcouncil.org/ldbc_finbench_docs/ldbc
 
 * bolt: Neo4j && Memgraph
 * tugraph: TuGraph
+* galaxybase: Galaxybase
 
 Please see each subdirectory for more information and test usage.
