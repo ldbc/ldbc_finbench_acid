@@ -6,8 +6,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
 import ldbc.finbench.acid.driver.TestDriver;
 import ldbc.finbench.acid.transactions.TransactionThread;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -17,7 +21,8 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
 
     protected TTestDriver testDriver;
     protected ExecutorService executorService = Executors.newFixedThreadPool(8);
-    boolean printStackTrace = true;
+    private boolean printStackTrace = false;
+    private static final Logger logger = LogManager.getLogger(Neo4jAcidTest.class);
 
     public AcidTest(TTestDriver testDriver) {
         this.testDriver = testDriver;
@@ -49,9 +54,12 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         testDriver.atomicityInit();
 
         final int nTransactions = 50;
+
+        logger.info("Total count of transactions: " + nTransactions);
+
         int aborted = 0;
 
-        Map<String, Object> committed = new HashMap<>(testDriver.atomicityCheck());
+        Map<String, Object> committed = testDriver.atomicityCheck();
         Map<String, Object> parameters = new HashMap<>();
 
         for (int i = 0; i < nTransactions; i++) {
@@ -67,14 +75,14 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 printStackTrace(e);
             }
         }
-        System.out.printf("AtomicityCTest: Number of aborted transactions: %d\n", aborted);
+        logger.info("The number of aborted transactions: " + aborted);
 
         Map<String, Object> results = testDriver.atomicityCheck();
         Assert.assertEquals((long) committed.get("numAccounts"), (long) results.get("numAccounts"));
         Assert.assertEquals((long) committed.get("numNames"), (long) results.get("numNames"));
         Assert.assertEquals((long) committed.get("numTransferred"), (long) results.get("numTransferred"));
-        Assert.assertTrue(aborted != nTransactions);
-        System.out.println("AtomicityCTest passed");
+        Assert.assertNotEquals(0, aborted);
+        logger.info("Test passed");
     }
 
     @Test
@@ -82,6 +90,9 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         testDriver.atomicityInit();
 
         final int nTransactions = 50;
+
+        logger.info("Total count of transactions: " + nTransactions);
+
         int aborted = 0;
 
         Map<String, Object> committed = new HashMap<>(testDriver.atomicityCheck());
@@ -106,20 +117,23 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
             }
         }
 
-        System.out.printf("AtomicityRbTest: Number of aborted transactions: %d\n", aborted);
+        logger.info("The number of aborted transactions: " + aborted);
 
         Map<String, Object> results = testDriver.atomicityCheck();
         Assert.assertEquals((long) committed.get("numAccounts"), (long) results.get("numAccounts"));
         Assert.assertEquals((long) committed.get("numNames"), (long) results.get("numNames"));
         Assert.assertEquals((long) committed.get("numTransferred"), (long) results.get("numTransferred"));
-        Assert.assertTrue(aborted != nTransactions);
-        System.out.println("AtomicityRbTest passed");
+        Assert.assertEquals(25, aborted);
+
+        logger.info("Test passed");
     }
 
     @Test
     public void g0Test() throws Exception {
         testDriver.g0Init();
         final int wc = 200;
+        logger.info("Total count of transactions: " + wc);
+
         int aborted = 0;
 
         List<TransactionThread<Map<String, Object>, Map<String, Object>>> clients = new ArrayList<>();
@@ -137,7 +151,7 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 printStackTrace(e);
             }
         }
-        System.out.printf("G0Test: Number of aborted transactions: %d\n", aborted);
+        logger.info("The number of aborted transactions: " + aborted);
 
         Map<String, Object> results = testDriver.g0check(ImmutableMap.of("account1Id", 1L, "account2Id", 2L));
         if (results.containsKey("a1VersionHistory")) {
@@ -154,17 +168,12 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
             a2VersionHistory.retainAll(a1VersionHistory);
             a2VersionHistory.retainAll(tVersionHistory);
 
-            System.out.printf("G0Test:    %s %s %s %5b %5b %5b\n",
-                    a1VersionHistory, tVersionHistory, a2VersionHistory,
-                    a1VersionHistory.equals(tVersionHistory),
-                    a1VersionHistory.equals(a2VersionHistory),
-                    tVersionHistory.equals(a1VersionHistory));
             Assert.assertEquals(a1VersionHistory, tVersionHistory);
             Assert.assertEquals(a1VersionHistory, a2VersionHistory);
             Assert.assertEquals(tVersionHistory, a1VersionHistory);
         }
         Assert.assertTrue(aborted != wc);
-        System.out.println("G0Test passed");
+        logger.info("Test passed.");
     }
 
     @Test
@@ -172,8 +181,12 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         testDriver.g1aInit();
         final int wc = 5;
         final int rc = 5;
-        int abortedW = 0;
-        int abortedR = 0;
+
+        logger.info("Total count of write transactions: " + wc);
+        logger.info("Total count of read transactions: " + rc);
+
+        int shouldAbortW = 0;
+        int shouldAbortR = 0;
         int numAnomaly = 0;
 
         long expected = (long) testDriver.g1aR(ImmutableMap.of("accountId", 1L)).get("aBalance");
@@ -193,7 +206,7 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
             try {
                 final Map<String, Object> results = futures.get(i).get();
             } catch (Exception e) {
-                abortedW++;
+                shouldAbortW++;
                 printStackTrace(e);
             }
         }
@@ -201,21 +214,23 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
             try {
                 final Map<String, Object> results = futures.get(i).get();
                 final long aBalance = (long) results.get("aBalance");
-                System.out.printf("G1aTest:   %4d %4d %5b\n", expected, aBalance, expected == aBalance);
                 if (expected != aBalance) {
                     numAnomaly++;
                 }
             } catch (Exception e) {
-                abortedR++;
+                shouldAbortR++;
                 printStackTrace(e);
             }
         }
 
-        System.out.printf("G1aTest: Number of aborted transactions: %d %d\n", abortedW, abortedR);
+        logger.info("The number of aborted write transactions: " + shouldAbortW);
+        logger.info("The number of aborted read transactions: " + shouldAbortR);
+
         Assert.assertEquals(0, numAnomaly);
-        Assert.assertTrue(abortedW != wc);
-        Assert.assertTrue(abortedR != rc);
-        System.out.println("G1aTest passed");
+        Assert.assertTrue(shouldAbortW != wc);
+        Assert.assertTrue(shouldAbortR != rc);
+
+        logger.info("Test passed");
     }
 
     @Test
@@ -223,6 +238,10 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         testDriver.g1bInit();
         final int wc = 20;
         final int rc = 20;
+
+        logger.info("Total count of write transactions: " + wc);
+        logger.info("Total count of read transactions: " + rc);
+
         int abortedW = 0;
         int abortedR = 0;
         int numAnomaly = 0;
@@ -253,7 +272,6 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
             try {
                 final Map<String, Object> results = futures.get(i).get();
                 final long aBalance = (long) results.get("aBalance");
-                System.out.printf("G1bTest:   %4d %4d %5b\n", odd, aBalance, aBalance % 2 == 1);
                 if (aBalance % 2 != 1) {
                     numAnomaly++;
                 }
@@ -263,23 +281,29 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
             }
         }
 
-        System.out.printf("G1bTest: Number of aborted transactions: %d %d\n", abortedW, abortedR);
+        logger.info("The number of aborted write transactions: " + abortedW);
+        logger.info("The number of aborted read transactions: " + abortedR);
+
         Assert.assertEquals(0, numAnomaly);
         Assert.assertTrue(abortedW != wc);
         Assert.assertTrue(abortedR != rc);
-        System.out.println("G1bTest passed");
+
+        logger.info("Test passed");
     }
 
     @Test
     public void g1cTest() throws Exception {
         testDriver.g1cInit();
         final int c = 100;
+
+        logger.info("Total count of transactions: " + c);
+
         int aborted = 0;
-        int numAnomaly = 0;
 
         List<TransactionThread<Map<String, Object>, Map<String, Object>>> clients = new ArrayList<>();
         final Random random = new Random();
         for (long i = 1; i <= c; i++) {
+
             final boolean order = random.nextBoolean();
             long account1Id = order ? 1L : 2L;
             long account2Id = order ? 2L : 1L;
@@ -288,52 +312,59 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         }
 
         final List<Future<Map<String, Object>>> futures = executorService.invokeAll(clients);
-        long[] results = new long[c];
-        for (int i = 0; i < c; i++) {
+        List<Optional<Map<String, Object>>> resultsList = new ArrayList<>();
+
+        for (Future<Map<String, Object>> future : futures) {
             try {
-                results[i] = (long) futures.get(i).get().get("account2Balance");
+                Map<String, Object> result = future.get();
+                resultsList.add(Optional.ofNullable(result));
+                if (result == null) {
+                    aborted++;
+                }
+
             } catch (Exception e) {
-                results[i] = -1;
+                resultsList.add(Optional.empty());
                 aborted++;
                 printStackTrace(e);
             }
         }
 
-        System.out.printf("G1cTest: Number of aborted transactions: %d\n", aborted);
-
-        // not that transactions are indexed from 1
-        // but lists are indexed from 0
         for (int i = 1; i <= c; i++) {
-            int account2Balance1 = (int) results[i - 1];
-            if (account2Balance1 == -1) {
+            Optional<Map<String, Object>> result1 = resultsList.get(i - 1);
+            if (!result1.isPresent()) {
                 continue;
             }
-
+            Map<String, Object> results1 = result1.get();
+            final int account2Balance1 = ((Long) results1.get("account2Balance")).intValue();
             if (account2Balance1 == 0L) {
                 continue;
             }
 
-            int account2Balance2 = (int) results[account2Balance1 - 1];
-            if (account2Balance2 == -1) {
-                System.out.printf("G1cTest failed: Transaction %d read data by aborted transaction %d", i,
-                        account2Balance1);
-                numAnomaly++;
-            } else if (i == account2Balance2) {
-                System.out.printf("G1cTest failed: Transaction %d read data by transaction %d", i, account2Balance1);
-                numAnomaly++;
-            }
-            System.out.printf("G1cTest:   %4d %4d %4d %5b\n", i, account2Balance1, account2Balance2,
-                    i != account2Balance2);
+            Optional<Map<String, Object>> result2 = resultsList.get(account2Balance1 - 1);
+            Assert.assertTrue(String.format("Transaction %d read data by aborted transaction %d", i, account2Balance1),
+                    result2.isPresent());
+
+            Map<String, Object> results2 = result2.get();
+            final int account2Balance2 = ((Long) results2.get("account2Balance")).intValue();
+
+            // logger.info(String.format("G1c: %4d %4d %4d %5b", i, account2Balance1,
+            // account2Balance2,
+            // i != account2Balance2));
+            Assert.assertNotEquals(i, account2Balance2);
+
         }
-        Assert.assertTrue(aborted != c);
-        Assert.assertEquals(0, numAnomaly);
-        System.out.println("G1cTest passed");
+
+        logger.info("The number of aborted transactions: " + aborted);
+        Assert.assertNotEquals(c, aborted);
+        logger.info("Test passed");
     }
 
     @Test
     public void impTest() throws Exception {
         testDriver.impInit();
         final int c = 20;
+
+        logger.info("Total count of transactions: " + c);
 
         int abortedW = 0;
         int abortedR = 0;
@@ -358,7 +389,8 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 if (i % 2 != 0) {
                     final long firstRead = (long) results.get("firstRead");
                     final long secondRead = (long) results.get("secondRead");
-                    System.out.printf("IMP:   %4d %4d %5b\n", firstRead, secondRead, firstRead == secondRead);
+                    // logger.info("IMP: %4d %4d %5b\n", firstRead, secondRead, firstRead ==
+                    // secondRead);
                     if (firstRead != secondRead) {
                         numAnomaly++;
                     }
@@ -373,17 +405,21 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
             }
         }
 
-        System.out.printf("IMPTest: Number of aborted transactions: %d %d\n", abortedR, abortedW);
+        logger.info("The number of aborted read transactions: " + abortedR);
+        logger.info("The number of aborted write transactions: " + abortedW);
         Assert.assertEquals(0, numAnomaly);
         Assert.assertTrue(abortedW != c);
         Assert.assertTrue(abortedR != c);
-        System.out.println("IMPTest passed");
+        logger.info("Test passed");
     }
 
     @Test
     public void pmpTest() throws Exception {
         testDriver.pmpInit();
         final int c = 20;
+
+        logger.info("Total count of transactions: " + c);
+
         int abortedW = 0;
         int abortedR = 0;
         int numAnomaly = 0;
@@ -408,7 +444,8 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 if (results.containsKey("firstRead")) {
                     final long firstRead = (long) results.get("firstRead");
                     final long secondRead = (long) results.get("secondRead");
-                    System.out.printf("PMP:   %4d %4d %5b\n", firstRead, secondRead, firstRead == secondRead);
+                    // logger.info("PMP: %4d %4d %5b\n", firstRead, secondRead, firstRead ==
+                    // secondRead);
                     if (firstRead != secondRead) {
                         numAnomaly++;
                     }
@@ -424,17 +461,22 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 i++;
             }
         }
-        System.out.printf("PMPTest: Number of aborted transactions: %d %d\n", abortedR, abortedW);
+        logger.info("The number of aborted read transactions: " + abortedR);
+        logger.info("The number of aborted write transactions: " + abortedW);
+
         Assert.assertEquals(0, numAnomaly);
         Assert.assertTrue(abortedW != c);
         Assert.assertTrue(abortedR != c);
-        System.out.println("PMPTest passed");
+
+        logger.info("Test passed");
     }
 
     @Test
     public void otvTest() throws Exception {
         testDriver.otvInit();
         final int rc = 50;
+
+        logger.info("Total count of read transactions: " + rc);
 
         int aborted = 0;
         int numAnomaly = 0;
@@ -454,8 +496,8 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 if (results.containsKey("firstRead")) {
                     final List<Long> firstRead = ((List<Long>) results.get("firstRead"));
                     final List<Long> secondRead = ((List<Long>) results.get("secondRead"));
-                    System.out.printf("OTV:   %4s %4s %5b\n", firstRead, secondRead,
-                            Collections.max(firstRead) <= Collections.min(secondRead));
+                    // logger.info("OTV: %4s %4s %5b\n", firstRead, secondRead,
+                    // Collections.max(firstRead) <= Collections.min(secondRead));
                     if (Collections.max(firstRead) > Collections.min(secondRead)) {
                         numAnomaly++;
                     }
@@ -465,15 +507,19 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 printStackTrace(e);
             }
         }
-        System.out.printf("OTVTest: Number of aborted transactions: %d\n", aborted);
+        logger.info("The number of aborted transactions: " + aborted);
+        Assert.assertTrue(rc != aborted);
         Assert.assertEquals(0, numAnomaly);
-        System.out.println("OTVTest passed");
+        logger.info("Test passed");
     }
 
     @Test
     public void frTest() throws Exception {
         testDriver.frInit();
         final int c = 100;
+
+        logger.info("Total count of transactions: " + c);
+
         int numAnomaly = 0;
 
         List<TransactionThread<Map<String, Object>, Map<String, Object>>> clients = new ArrayList<>();
@@ -497,7 +543,8 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 if (i % 2 == 1) {
                     final List<Long> firstRead = ((List<Long>) results.get("firstRead"));
                     final List<Long> secondRead = ((List<Long>) results.get("secondRead"));
-                    System.out.printf("FR:   %4s %4s %5b\n", firstRead, secondRead, firstRead.equals(secondRead));
+                    // logger.info("FR: %4s %4s %5b\n", firstRead, secondRead,
+                    // firstRead.equals(secondRead));
                     if (!firstRead.equals(secondRead)) {
                         numAnomaly++;
                     }
@@ -513,17 +560,22 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 i++;
             }
         }
-        System.out.printf("FRTest: Number of aborted transactions: %d %d\n", abortedW, abortedR);
+
+        logger.info("The number of aborted read transactions: " + abortedR);
+        logger.info("The number of aborted write transactions: " + abortedW);
+
         Assert.assertEquals(0, numAnomaly);
         Assert.assertTrue(abortedR != c);
         Assert.assertTrue(abortedW != c);
-        System.out.println("FRTest passed");
+        logger.info("Test passed");
     }
 
     @Test
     public void luTest() throws Exception {
         testDriver.luInit();
         final int nTransactions = 200;
+
+        logger.info("Total count of transactions: " + nTransactions);
 
         int aborted = 0;
 
@@ -543,23 +595,26 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         }
 
         Map<String, Object> results = testDriver.luR(ImmutableMap.of("accountId", 1L));
-        final long numTransferProp = (long) results.get("numTransferProp");
+        final long numTransferred = (long) results.get("numTransferred");
         final long numTransferEdges = (long) results.get("numTransferEdges");
-        final boolean pass = ((nTransactions - aborted == numTransferProp)
+        final boolean pass = ((nTransactions - aborted == numTransferred)
                 && (nTransactions - aborted == numTransferEdges));
-        System.out.printf("LU:    %4d %4d %4d %5b\n", nTransactions - aborted, numTransferProp, numTransferEdges, pass);
+        // logger.info("LU: %4d %4d %4d %5b\n", nTransactions - aborted, numTransferred,
+        // numTransferEdges, pass);
 
-        System.out.printf("LUTest: Number of aborted transactions: %d\n", aborted);
+        logger.info("The number of aborted transactions: " + aborted);
         Assert.assertEquals(nTransactions - aborted, numTransferEdges);
-        Assert.assertEquals(nTransactions - aborted, numTransferProp);
+        Assert.assertEquals(nTransactions - aborted, numTransferred);
         Assert.assertTrue(aborted != nTransactions);
-        System.out.println("LUTest passed");
+        logger.info("Test passed");
     }
 
     @Test
     public void wsTest() throws Exception {
         testDriver.wsInit();
         final int wc = 50;
+
+        logger.info("Total count of write transactions: " + wc);
 
         int numAccountPairs = 10;
         List<TransactionThread<Map<String, Object>, Map<String, Object>>> clients = new ArrayList<>();
@@ -583,13 +638,15 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
                 printStackTrace(e);
             }
         }
-        System.out.printf("WSTest: Number of aborted transactions: %d\n", aborted);
+
+        logger.info("The number of aborted transactions: " + aborted);
 
         Map<String, Object> results = testDriver.wsR(ImmutableMap.of());
-        System.out.println(results);
+        // logger.info(results);
+
         Assert.assertTrue(aborted != wc);
         Assert.assertTrue(results.isEmpty());
-        System.out.println("WSTest passed");
+        logger.info("Test passed");
     }
 
     @After

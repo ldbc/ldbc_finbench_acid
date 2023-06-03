@@ -6,10 +6,13 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.logging.Level;
 import ldbc.finbench.acid.driver.TestDriver;
 import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Transaction;
@@ -21,11 +24,12 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     protected Driver driver;
 
     public BoltDriver(String host, int port) {
+        Config config = Config.builder().withLogging(Logging.javaUtilLogging(Level.WARNING)).build();
         try {
             String ip = InetAddress.getByName(host).getHostAddress();
-            driver = GraphDatabase.driver("bolt://" + ip + ":" + port, AuthTokens.none());
+            driver = GraphDatabase.driver("bolt://" + ip + ":" + port, AuthTokens.none(), config);
         } catch (UnknownHostException e) {
-            driver = GraphDatabase.driver("bolt://localhost:" + port, AuthTokens.none());
+            driver = GraphDatabase.driver("bolt://localhost:" + port, AuthTokens.none(), config);
         }
     }
 
@@ -67,7 +71,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public void atomicityInit() {
         final Transaction tt = startTransaction();
         tt.run("CREATE (:Account {id: 1, name: 'AliceAcc', transHistory: [100]}),\n"
-            + " (:Account {id: 2, name: 'BobAcc', transHistory: [50, 150]})");
+                + " (:Account {id: 2, name: 'BobAcc', transHistory: [50, 150]})");
         commitTransaction(tt);
     }
 
@@ -76,11 +80,12 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         final Transaction tt = startTransaction();
 
         tt.run("MATCH (a1:Account {id: $account1Id})\n"
-            + "CREATE (a1)-[t:transfer]->(a2:Account)\n"
-            + "SET\n"
-            + "  a1.transHistory = a1.transHistory + [$newTrans],\n"
-            + "  a2.id = $account2Id,\n"
-            + "  t.amount = $newTrans", parameters);
+                + "CREATE (a2:Account)\n"
+                + "CREATE (a1)-[t:transfer]->(a2:Account)\n"
+                + "SET\n"
+                + "  a1.transHistory = a1.transHistory + [$newTrans],\n"
+                + "  a2.id = $account2Id,\n"
+                + "  t.amount = $newTrans", parameters);
         commitTransaction(tt);
     }
 
@@ -89,7 +94,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         final Transaction tt = startTransaction();
 
         tt.run("MATCH (a1:Account {id: $account1Id})\n"
-            + "SET a1.transHistory = a1.transHistory + [$newTrans]", parameters);
+                + "SET a1.transHistory = a1.transHistory + [$newTrans]", parameters);
         final Result result = tt.run("MATCH (a2:Account {id: $account2Id}) RETURN a2", parameters);
         if (result.hasNext()) {
             abortTransaction(tt);
@@ -106,7 +111,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         final Transaction tt = startTransaction();
 
         Result result = tt.run("MATCH (a:Account)\n"
-            + "RETURN count(a) AS numAccounts, count(a.name) AS numNames, sum(size(a.transHistory)) AS numTransferred");
+                + "RETURN count(a) AS numAccounts, count(a.name) AS numNames, sum(size(a.transHistory)) AS numTransferred");
         Record record = result.next();
         final long numAccounts = record.get("numAccounts").asLong();
         final long numNames = record.get("numNames").asLong();
@@ -119,7 +124,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public void g0Init() {
         final Transaction tt = startTransaction();
         tt.run(
-            "CREATE (:Account {id: 1, versionHistory: [0]})-[:transfer {versionHistory: [0]}]->(:Account {id: 2, versionHistory: [0]})");
+                "CREATE (:Account {id: 1, versionHistory: [0]})-[:transfer {versionHistory: [0]}]->(:Account {id: 2, versionHistory: [0]})");
         commitTransaction(tt);
     }
 
@@ -128,9 +133,9 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         final Transaction tt = startTransaction();
 
         tt.run("MATCH (a1:Account {id: $account1Id})-[t:transfer]->(a2:Account {id: $account2Id})\n"
-            + "SET a1.versionHistory = a1.versionHistory + [$transactionId]\n"
-            + "SET a2.versionHistory = a2.versionHistory + [$transactionId]\n"
-            + "SET t.versionHistory  = t.versionHistory  + [$transactionId]", parameters);
+                + "SET a1.versionHistory = a1.versionHistory + [$transactionId]\n"
+                + "SET a2.versionHistory = a2.versionHistory + [$transactionId]\n"
+                + "SET t.versionHistory  = t.versionHistory  + [$transactionId]", parameters);
         commitTransaction(tt);
 
         return ImmutableMap.of();
@@ -141,17 +146,17 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         final Transaction tt = startTransaction();
 
         Result result = tt.run("MATCH (a1:Account {id: $account1Id})-[t:transfer]->(a2:Account {id: $account2Id})\n"
-            + "RETURN\n"
-            + "  a1.versionHistory AS a1VersionHistory,\n"
-            + "  t.versionHistory  AS tVersionHistory,\n"
-            + "  a2.versionHistory AS a2VersionHistory", parameters);
+                + "RETURN\n"
+                + "  a1.versionHistory AS a1VersionHistory,\n"
+                + "  t.versionHistory  AS tVersionHistory,\n"
+                + "  a2.versionHistory AS a2VersionHistory", parameters);
         Record record = result.next();
         final List<Object> a1VersionHistory = record.get("a1VersionHistory").asList();
         final List<Object> tVersionHistory = record.get("tVersionHistory").asList();
         final List<Object> a2VersionHistory = record.get("a2VersionHistory").asList();
 
         return ImmutableMap.of("a1VersionHistory", a1VersionHistory, "tVersionHistory", tVersionHistory,
-            "a2VersionHistory", a2VersionHistory);
+                "a2VersionHistory", a2VersionHistory);
     }
 
     @Override
@@ -167,7 +172,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
 
         // we cannot pass p as a parameter so we pass its internal ID instead
         final Result result = tt.run("MATCH (a:Account {id: $accountId})\n"
-            + "RETURN ID(a) AS internalAId", parameters);
+                + "RETURN ID(a) AS internalAId", parameters);
         if (!result.hasNext()) {
             throw new IllegalStateException("G1a1 Result empty");
         }
@@ -176,8 +181,8 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         sleep((Long) parameters.get("sleepTime"));
 
         tt.run("MATCH (a:Account)\n"
-            + "WHERE ID(a) = $internalAId\n"
-            + "SET a.balance = 200", ImmutableMap.of("internalAId", internalAId));
+                + "WHERE ID(a) = $internalAId\n"
+                + "SET a.balance = 200", ImmutableMap.of("internalAId", internalAId));
 
         sleep((Long) parameters.get("sleepTime"));
 
@@ -189,8 +194,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> g1aR(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
 
-        final Result result =
-            tt.run("MATCH (a:Account {id: $accountId}) RETURN a.balance AS aBalance", parameters);
+        final Result result = tt.run("MATCH (a:Account {id: $accountId}) RETURN a.balance AS aBalance", parameters);
         if (!result.hasNext()) {
             throw new IllegalStateException("G1a T2 Result empty");
         }
@@ -222,8 +226,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> g1bR(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
 
-        final Result result =
-            tt.run("MATCH (a:Account {id: $accountId}) RETURN a.balance AS aBalance", parameters);
+        final Result result = tt.run("MATCH (a:Account {id: $accountId}) RETURN a.balance AS aBalance", parameters);
         if (!result.hasNext()) {
             throw new IllegalStateException("G1b T2 Result empty");
         }
@@ -243,10 +246,10 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> g1c(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
         Result result = tt.run("MATCH (a1:Account {id: $account1Id})\n"
-            + "SET a1.balance = $transactionId\n"
-            + "WITH count(*) AS dummy\n"
-            + "MATCH (a2:Account {id: $account2Id})\n"
-            + "RETURN a2.balance AS account2Balance\n", parameters);
+                + "SET a1.balance = $transactionId\n"
+                + "WITH count(*) AS dummy\n"
+                + "MATCH (a2:Account {id: $account2Id})\n"
+                + "RETURN a2.balance AS account2Balance\n", parameters);
         final long account2Balance = result.next().get("account2Balance").asLong();
         commitTransaction(tt);
 
@@ -274,8 +277,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> impR(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
 
-        final Result result1 =
-            tt.run("MATCH (a:Account {id: $accountId}) RETURN a.balance AS firstRead", parameters);
+        final Result result1 = tt.run("MATCH (a:Account {id: $accountId}) RETURN a.balance AS firstRead", parameters);
         if (!result1.hasNext()) {
             throw new IllegalStateException("IMP result1 empty");
         }
@@ -283,8 +285,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
 
         sleep((Long) parameters.get("sleepTime"));
 
-        final Result result2 =
-            tt.run("MATCH (a:Account {id: $accountId}) RETURN a.balance AS secondRead", parameters);
+        final Result result2 = tt.run("MATCH (a:Account {id: $accountId}) RETURN a.balance AS secondRead", parameters);
         if (!result2.hasNext()) {
             throw new IllegalStateException("IMP result2 empty");
         }
@@ -306,7 +307,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> pmpW(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
         tt.run("MATCH (a1:Account {id: $account1Id}), (a2:Account {id: $account2Id})\n"
-            + "CREATE (a1)-[:transfer]->(a2)", parameters);
+                + "CREATE (a1)-[:transfer]->(a2)", parameters);
         commitTransaction(tt);
         return ImmutableMap.of();
     }
@@ -315,8 +316,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> pmpR(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
 
-        final Result result1 =
-            tt.run("MATCH (a2:Account {id: $account2Id})<-[:transfer]-(a1:Account)\n"
+        final Result result1 = tt.run("MATCH (a2:Account {id: $account2Id})<-[:transfer]-(a1:Account)\n"
                 + "RETURN count(a1) AS firstRead", parameters);
         if (!result1.hasNext()) {
             throw new IllegalStateException("PMP result1 empty");
@@ -325,8 +325,8 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
 
         sleep((Long) parameters.get("sleepTime"));
 
-        final Result result2 =
-            tt.run("MATCH (a2:Account {id: $account2Id})<-[:transfer]-(a3:Account) RETURN count(a3) AS secondRead",
+        final Result result2 = tt.run(
+                "MATCH (a2:Account {id: $account2Id})<-[:transfer]-(a3:Account) RETURN count(a3) AS secondRead",
                 parameters);
         if (!result2.hasNext()) {
             throw new IllegalStateException("PMP result2 empty");
@@ -340,9 +340,9 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public void otvInit() {
         final Transaction tt = startTransaction();
         tt.run("CREATE (a1:Account {id: 1, balance: 0})-[:transfer]->"
-            + "  (:Account {id: 2, balance: 0})-[:transfer]->"
-            + "  (:Account {id: 3, balance: 0})-[:transfer]->"
-            + "  (:Account {id: 4, balance: 0})-[:transfer]->(a1)");
+                + "  (:Account {id: 2, balance: 0})-[:transfer]->"
+                + "  (:Account {id: 3, balance: 0})-[:transfer]->"
+                + "  (:Account {id: 4, balance: 0})-[:transfer]->(a1)");
         commitTransaction(tt);
     }
 
@@ -354,14 +354,11 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
 
             final Transaction tt = startTransaction();
             tt.run(
-                "MATCH path = (a1:Account {id: $accountId})-[:transfer]->(a2)-[:transfer]->(a3)-[:transfer]->(a4)-[:transfer]->(a1)\n"
-                    + " SET a1.balance = a1.balance + 1\n"
-                    + " SET a2.balance = a2.balance + 1\n"
-                    + " SET a3.balance = a3.balance + 1\n"
-                    + " SET a4.balance = a4.balance + 1\n",
-                ImmutableMap.of("accountId", accountId));
+                    "MATCH path = (n:Account {id: $accountId})-[:transfer*..4]->(n)\n"
+                            + " UNWIND nodes(path)[0..4] as a\n"
+                            + " SET a.balance = a.balance + 1\n",
+                    ImmutableMap.of("accountId", accountId));
             commitTransaction(tt);
-            // TODO: once memgraph fixes this, use an actual path
         }
         return ImmutableMap.of();
     }
@@ -370,9 +367,9 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> otvR(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
         final Result result1 = tt.run(
-            "MATCH (a1:Account {id: $accountId})-[:transfer]->(a2)-[:transfer]->(a3)-[:transfer]->(a4)-[:transfer]->(p1)\n"
-                + "RETURN [a1.balance, a2.balance, a3.balance, a4.balance] AS firstRead",
-            parameters);
+                "MATCH p1 = (a1:Account {id: $accountId})-[:transfer*..4]->(a1)\n"
+                        + "RETURN extract(a in nodes(p1) | a.balance) AS firstRead",
+                parameters);
         if (!result1.hasNext()) {
             throw new IllegalStateException("OTV2 result1 empty");
         }
@@ -381,9 +378,9 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         sleep((Long) parameters.get("sleepTime"));
 
         final Result result2 = tt.run(
-            "MATCH (a1:Account {id: $accountId})-[:transfer]->(a2)-[:transfer]->(a3)-[:transfer]->(a4)-[:transfer]->(a1)\n"
-                + "RETURN [a1.balance, a2.balance, a3.balance, a4.balance] AS secondRead",
-            parameters);
+                "MATCH p2 = (a2:Account {id: $accountId})-[:transfer*..4]->(a2)\n"
+                        + "RETURN extract(a in nodes(p2) | a.balance) AS secondRead",
+                parameters);
         if (!result2.hasNext()) {
             throw new IllegalStateException("OTV2 result2 empty");
         }
@@ -396,9 +393,9 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public void frInit() {
         final Transaction tt = startTransaction();
         tt.run("CREATE (a1:Account {id: 1, balance: 0})-[:transfer]->"
-            + "  (:Account {id: 2, balance: 0})-[:transfer]->"
-            + "  (:Account {id: 3, balance: 0})-[:transfer]->"
-            + "  (:Account {id: 4, balance: 0})-[:transfer]->(a1)");
+                + "  (:Account {id: 2, balance: 0})-[:transfer]->"
+                + "  (:Account {id: 3, balance: 0})-[:transfer]->"
+                + "  (:Account {id: 4, balance: 0})-[:transfer]->(a1)");
         commitTransaction(tt);
     }
 
@@ -406,11 +403,10 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> frW(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
         tt.run(
-            "MATCH path = (a1:Account {id: $accountId})-[:transfer]->(a2)-[:transfer]->(a3)-[:transfer]->(a4)-[:transfer]->(a1)\n"
-                + " SET a1.balance = a1.balance + 1\n"
-                + " SET a2.balance = a2.balance + 1\n"
-                + " SET a3.balance = a3.balance + 1\n"
-                + " SET a4.balance = a4.balance + 1\n", parameters);
+                "MATCH path = (n:Account {id: $accountId})-[:transfer*..4]->(n)\n"
+                        + " UNWIND nodes(path)[0..4] as a\n"
+                        + " SET a.balance = a.balance + 1\n",
+                parameters);
         commitTransaction(tt);
 
         return ImmutableMap.of();
@@ -420,12 +416,14 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> frR(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
 
-        // Neo4j: Extract is no longer supported in neo4j >= 5.x, use list comprehension instead
-        // Memgraph:  Not yet implemented: atom expression '[a IN nodes(path1)|a.balance]'
+        // Neo4j: Extract is no longer supported in neo4j >= 5.x, use list comprehension
+        // instead
+        // Memgraph: Not yet implemented: atom expression '[a IN
+        // nodes(path1)|a.balance]'
         final Result result1 = tt.run(
-            "MATCH (a1:Account {id: $accountId})-[:transfer]->(a2)-[:transfer]->(a3)-[:transfer]->(a4)-[:transfer]->(a1)\n"
-                + "RETURN [a1.balance, a2.balance, a3.balance, a4.balance] AS firstRead",
-            parameters);
+                "MATCH p1 = (a1:Account {id: $accountId})-[:transfer*..4]->(a1)\n"
+                        + "RETURN extract(a in nodes(p1) | a.balance) AS firstRead",
+                parameters);
         if (!result1.hasNext()) {
             throw new IllegalStateException("FR2 result1 empty");
         }
@@ -434,9 +432,9 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         sleep((Long) parameters.get("sleepTime"));
 
         final Result result2 = tt.run(
-            "MATCH (a1:Account {id: $accountId})-[:transfer]->(a2)-[:transfer]->(a3)-[:transfer]->(a4)-[:transfer]->(a1)\n"
-                + "RETURN [a1.balance, a2.balance, a3.balance, a4.balance] AS secondRead",
-            parameters);
+                "MATCH p2 = (a2:Account {id: $accountId})-[:transfer*..4]->(a2)\n"
+                        + "RETURN extract(a in nodes(p2) | a.balance) AS secondRead",
+                parameters);
         if (!result2.hasNext()) {
             throw new IllegalStateException("FR2 result2 empty");
         }
@@ -458,9 +456,9 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> luW(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
         tt.run("MATCH (a1:Account {id: 1})\n"
-            + "CREATE (a1)-[:transfer]->(a2)\n"
-            + "SET a1.numTransferred = a1.numTransferred + 1\n"
-            + "RETURN a1.numTransferred\n");
+                + "CREATE (a1)-[:transfer]->(a2)\n"
+                + "SET a1.numTransferred = a1.numTransferred + 1\n"
+                + "RETURN a1.numTransferred\n");
         commitTransaction(tt);
         return ImmutableMap.of();
     }
@@ -469,14 +467,14 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
     public Map<String, Object> luR(Map<String, Object> parameters) {
         final Transaction tt = startTransaction();
         final Result result = tt.run("MATCH (a:Account {id: $accountId})\n"
-            + "OPTIONAL MATCH (a)-[t:transfer]->()\n"
-            + "WITH a, count(t) AS numTransferEdges\n"
-            + "RETURN numTransferEdges,\n"
-            + "       a.numTransferred AS numTransferProp\n", parameters);
+                + "OPTIONAL MATCH (a)-[t:transfer]->()\n"
+                + "WITH a, count(t) AS numTransferEdges\n"
+                + "RETURN numTransferEdges,\n"
+                + "       a.numTransferred AS numTransferred\n", parameters);
         final Record record = result.next();
         long numTransferEdges = record.get("numTransferEdges").asLong();
-        long numTransferProp = record.get("numTransferProp").asLong();
-        return ImmutableMap.of("numTransferEdges", numTransferEdges, "numTransferProp", numTransferProp);
+        long numTransferred = record.get("numTransferred").asLong();
+        return ImmutableMap.of("numTransferEdges", numTransferEdges, "numTransferred", numTransferred);
     }
 
     @Override
@@ -486,7 +484,7 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         // create 10 pairs of accounts with indices (1,2), ..., (19,20)
         for (int i = 1; i <= 10; i++) {
             tt.run("CREATE (:Account {id: $account1Id, balance: 70}), (:Account {id: $account2Id, balance: 80})",
-                ImmutableMap.of("account1Id", 2 * i - 1, "account2Id", 2 * i));
+                    ImmutableMap.of("account1Id", 2 * i - 1, "account2Id", 2 * i));
         }
 
         commitTransaction(tt);
@@ -497,20 +495,21 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         final Transaction tt = startTransaction();
 
         final Result result = tt.run(
-            "MATCH (a1:Account {id: $account1Id}), (a2:Account {id: $account2Id})\n"
-                + "WHERE a1.balance + a2.balance >= 100\n"
-                + "RETURN a1, a2", parameters);
+                "MATCH (a1:Account {id: $account1Id}), (a2:Account {id: $account2Id})\n"
+                        + "WHERE a1.balance + a2.balance >= 100\n"
+                        + "RETURN a1, a2",
+                parameters);
 
         if (result.hasNext()) {
             sleep((Long) parameters.get("sleepTime"));
 
             long accountId = new Random().nextBoolean()
-                ? (long) parameters.get("account1Id") :
-                (long) parameters.get("account2Id");
+                    ? (long) parameters.get("account1Id")
+                    : (long) parameters.get("account2Id");
 
             tt.run("MATCH (a:Account {id: $accountId})\n"
                     + "SET a.balance = a.balance - 100",
-                ImmutableMap.of("accountId", accountId));
+                    ImmutableMap.of("accountId", accountId));
             commitTransaction(tt);
         }
 
@@ -522,16 +521,16 @@ public class BoltDriver extends TestDriver<Transaction, Map<String, Object>, Res
         final Transaction tt = startTransaction();
         // we select pairs of accounts using (id, id+1) pairs
         final Result result = tt.run("MATCH (a1:Account), (a2:Account {id: a1.id+1})\n"
-            + "WHERE a1.balance + a2.balance <= 0 and a1.id % 2 = 1 \n"
-            + "RETURN a1.id AS a1id, a1.balance AS a1balance, a2.id AS a2id, a2.balance AS a2balance");
+                + "WHERE a1.balance + a2.balance <= 0 and a1.id % 2 = 1 \n"
+                + "RETURN a1.id AS a1id, a1.balance AS a1balance, a2.id AS a2id, a2.balance AS a2balance");
 
         if (result.hasNext()) {
             Record record = result.next();
             return ImmutableMap.of(
-                "a1id", record.get("a1id"),
-                "a1balance", record.get("a1balance"),
-                "a2id", record.get("a2id"),
-                "a2balance", record.get("a2balance"));
+                    "a1id", record.get("a1id"),
+                    "a1balance", record.get("a1balance"),
+                    "a2id", record.get("a2id"),
+                    "a2balance", record.get("a2balance"));
         } else {
             return ImmutableMap.of();
         }
