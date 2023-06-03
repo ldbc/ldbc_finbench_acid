@@ -146,7 +146,7 @@ public class Acid {
                     "SET\n" +
                     "  a1.transHistory = a1.transHistory + ',' + '%s',\n" +
                     " t.amount = %s"
-                , parameters.get("account1Id"), parameters.get("account2Id"), parameters.get("newTrans"), parameters.get("amount"))).list();
+                , parameters.get("account1Id"), parameters.get("account2Id"), parameters.get("newTrans"), parameters.get("newTrans"))).list();
 
         });
     }
@@ -1077,9 +1077,9 @@ public class Acid {
         for (int i = 0; i < wc; i++) {
             futures.add(executorService.submit(() -> {
                 try {
-                    long person1Id = random.nextInt(numAccountPairs) * 2 + 1;
-                    parameters.put("person1Id", person1Id);
-                    parameters.put("person2Id", person1Id + 1);
+                    long accountId = random.nextInt(numAccountPairs) * 2 + 1;
+                    parameters.put("account1Id", accountId);
+                    parameters.put("account2Id", accountId + 1);
                     wsW(parameters);
                 } catch (Exception e) {
                     aborted.getAndIncrement();
