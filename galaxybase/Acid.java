@@ -537,9 +537,9 @@ public class Acid {
             int finalI = i;
             futures.add(executorService.submit(() -> {
                 try {
-                    result[finalI] = (double) g1c(parameters).get("account2Balance");
+                    result[finalI - 1] = (double) g1c(parameters).get("account2Balance");
                 } catch (Exception e) {
-                    result[finalI] = -1;
+                    result[finalI - 1] = -1;
                 }
             }));
         }
