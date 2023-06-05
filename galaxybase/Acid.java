@@ -537,9 +537,9 @@ public class Acid {
             int finalI = i;
             futures.add(executorService.submit(() -> {
                 try {
-                    result[finalI] = (double) g1c(parameters).get("account2Balance");
+                    result[finalI - 1] = (double) g1c(parameters).get("account2Balance");
                 } catch (Exception e) {
-                    result[finalI] = -1;
+                    result[finalI - 1] = -1;
                 }
             }));
         }
@@ -550,7 +550,6 @@ public class Acid {
                 e.printStackTrace();
             }
         }
-
         for (int i = 1; i <= c; i++) {
             double account2Balance1 = result[i - 1];
             if (account2Balance1 == -1) {
@@ -1047,7 +1046,7 @@ public class Acid {
 
     private Map<String, Object> wsR(Map<String, Object> parameters) {
         return transaction(e -> {
-            StatementResult result = e.executeQuery("MATCH (a1:Account), (a2:Account {id: a1.id+1})\n"
+            StatementResult result = e.executeQuery("MATCH (a1:Account), (a2:Account {id: toString(toInteger(a1.id)+1)})\n"
                 + "WHERE a1.balance + a2.balance <= 0 and toInteger(a1.id) % 2 = 1 \n"
                 + "RETURN a1.id AS a1id, a1.balance AS a1balance, a2.id AS a2id, a2.balance AS a2balance"
             );
@@ -1070,13 +1069,13 @@ public class Acid {
         int wc = 50;
         int numAccountPairs = 10;
         Random random = new Random();
-        Map<String, Object> parameters = new HashMap<>();
-        parameters.put("sleepTime", 250L);
         AtomicLong aborted = new AtomicLong();
         List<Future<?>> futures = new ArrayList<>();
         for (int i = 0; i < wc; i++) {
             futures.add(executorService.submit(() -> {
                 try {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("sleepTime", 250L);
                     long accountId = random.nextInt(numAccountPairs) * 2 + 1;
                     parameters.put("account1Id", accountId);
                     parameters.put("account2Id", accountId + 1);
