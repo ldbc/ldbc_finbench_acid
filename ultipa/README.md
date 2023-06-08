@@ -5,6 +5,20 @@ This is the module for LDBC FinBench ACID tests on Ultipa Graph.
 **Note: Cypher used in this module is only for the purpose of comparison and reference with UQL.
 
 ## Getting started
+Modify test address
+
+```
+public UltipaAcidTest() {
+//super(new UltipaDriver("http://xx.xxx.x.xxx:xxxx", "xxx.xxx.x.xx", 666666, "xxxx", "xxxxxx").reset());
+}
+
+httpServer :  ultipaServer gateway
+host :    ultipaServer ip
+port :    ultipaServer port
+username : ultipaServer username
+password : ultipaServer  password
+```
+
 
 Run tests:
 
