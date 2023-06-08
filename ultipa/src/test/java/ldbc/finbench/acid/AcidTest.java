@@ -113,6 +113,7 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
         Assert.assertEquals((long) committed.get("numNames"), (long) results.get("numNames"));
         Assert.assertEquals((long) committed.get("numTransferred"), (long) results.get("numTransferred"));
         Assert.assertTrue(aborted != nTransactions);
+        Assert.assertEquals(25, aborted);
         System.out.println("AtomicityRbTest passed");
     }
 
@@ -466,6 +467,7 @@ public abstract class AcidTest<TTestDriver extends TestDriver> {
             }
         }
         System.out.printf("OTVTest: Number of aborted transactions: %d\n", aborted);
+        Assert.assertTrue(rc != aborted);
         Assert.assertEquals(0, numAnomaly);
         System.out.println("OTVTest passed");
     }
