@@ -612,7 +612,7 @@ public class UltipaDriver extends TestDriver<UltipaConnection, Map<String, Objec
         String cypher = "MATCH (a:Account {id: $accountId}) SET a.balance = a.balance + 1 RETURN a";
         UltipaResultSet result;
         try {
-            result = tt.run(format("update().nodes({@account}).set({balance:this.balance + 1 })", parameters));
+            result = tt.run(format("update().nodes({@account && _id==$accountId}).set({balance:this.balance + 1 })", parameters));
             assertSuccess(result);
             commitTransaction(tt);
             return ImmutableMap.of();
